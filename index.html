@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>크리에이터 포트폴리오 관리기 — ROI 분석 & 코칭</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:linear-gradient(135deg,#141e30,#243b55);min-height:100vh;color:#e0e0e0;padding:20px}
+.container{max-width:900px;margin:0 auto}
+h1{text-align:center;font-size:1.8rem;margin-bottom:8px;color:#fff}
+.subtitle{text-align:center;color:#a0a0c0;margin-bottom:24px;font-size:.95rem}
+.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:20px;margin-bottom:16px;backdrop-filter:blur(10px)}
+.card h2{font-size:1.1rem;margin-bottom:12px-color:#f39c12}
+label{display:block;font-size:.85rem;color:#b0b0d0;margin-bottom:4px}
+input,textarea{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:rgba(0,0,0,.3);color:#e0e0e0;font-size:.95rem;margin-bottom:12px}
+textarea{min-height:120px;resize:vertical}
+input:focus,textarea:focus{outline:none;border-color:#f39c12}
+.btn{display:inline-block;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 4px 15px rgba(243,156,18,.4)}
+.btn-danger{background:rgba(231,76,60,.2);color:#e74c3c;border:1px solid rgba(231,76,60,.3)}
+.btn-sm{padding:6px 14px;font-size:.8rem}
+.creator-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.creator-table th,.creator-table td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
+.creator-table th{color:#f39c12;font-weight:600;font-size:.8rem}
+.creator-table tr:hover{background:rgba(255,255,255,.03)}
+.group-top{border-left:3px solid #2ecc71}
+.group-mid{border-left:3px solid #f1c40f}
+.group-bottom{border-left:3px solid #e74c3c}
+.group-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:600}
+.badge-top{background:rgba(46,204,113,.2);color:#2ecc71}
+.badge-mid{background:rgba(241,196,15,.2);color:#f1c40f}
+.badge-bottom{background:rgba(231,76,60,.2);color:#e74c3c}
+.bar-chart{margin:12px 0}
+.bar-row{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:.8rem}
+.bar-row .label{width:100px;text-align:right;color:#b0b0d0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-row .bar{flex:1;height:18px;background:rgba(0,0,0,.3);border-radius:9px;overflow:hidden}
+.bar-row .fill{height:100%;border-radius:9px;transition:width .5s}
+.bar-row .val{width:80px;font-weight:600}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0}
+.summary-item{background:rgba(0,0,0,.2);border-radius:8px;padding:14px;text-align:center}
+.summary-item .num{font-size:1.5rem;font-weight:700;color:#f39c12}
+.summary-item .label{font-size:.75rem;color:#888;margin-top:4px}
+.coach-card{background:rgba(241,196,15,.08);border:1px solid rgba(241,196,15,.2);border-radius:8px;padding:12px;margin:8px 0;font-size:.85rem}
+.coach-card .name{font-weight:700;color:#f1c40f}
+.coach-card .reason{color:#b0b0d0;margin-top:4px;font-size:.8rem}
+.empty{text-align:center;color:#666;padding:20px;font-size:.9rem}
+@media(max-width:600px){h1{font-size:1.4rem}.creator-table{font-size:.75rem}.creator-table th,.creator-table td{padding:6px 4px}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🎬 크리에이터 포트폴리오 관리기</h1>
+<p class="subtitle">ROI 기반 크리에이터 분류 · 코칭 추천 · 정리 대상 표시</p>
+
+<div class="card">
+<h2>📋 크리에이터 목록 입력</h2>
+<p style="font-size:.8rem;color:#888;margin-bottom:12px">형식: 이름, 조회수, 비용(원), 영상 수 (한 줄에 한 명씩)</p>
+<textarea id="creators" placeholder="예:
+김유튜브, 5000000, 3000000, 120
+박인플루언서, 800000, 500000, 45
+이소셜, 200000, 100000, 30
+최신규, 50000, 200000, 10"></textarea>
+</div>
+
+<div style="text-align:center;margin:16px 0">
+<button class="btn btn-primary" onclick="analyze()">📊 포트폴리오 분석</button>
+</div>
+
+<div id="result"></div>
+
+<div class="card">
+<h2>📜 분석 기록</h2>
+<div id="history"></div>
+<div style="margin-top:12px;text-align:right">
+<button class="btn btn-danger btn-sm" onclick="clearHistory()">기록 전체 삭제</button>
+</div>
+</div>
+</div>
+
+<script>
+function parseCreators(text){
+  return text.split('\n').map(l=>l.trim()).filter(l=>l).map((line,i)=>{
+    const parts = line.split(',').map(p=>p.trim());
+    if(parts.length<4) return null;
+    const name = parts[0];
+    const views = parseInt(parts[1].replace(/,/g,'')) || 0;
+    const cost = parseInt(parts[2].replace(/,/g,'')) || 0;
+    const videos = parseInt(parts[3]) || 0;
+    if(!name || views<=0 || cost<=0) return null;
+    return {name, views, cost, videos, roi: views/cost};
+  }).filter(Boolean);
+}
+
+function analyze(){
+  const text = document.getElementById('creators').value.trim();
+  if(!text){
+    alert('크리에이터 목록을 입력해주세요.');
+    return;
+  }
+
+  const creators = parseCreators(text);
+  if(creators.length===0){
+    alert('올바른 형식으로 입력해주세요.\n형식: 이름, 조회수, 비용, 영상 수');
+    return;
+  }
+
+  // ROI 기준 정렬
+  creators.sort((a,b)=>b.roi-a.roi);
+
+  const total = creators.length;
+  const topCount = Math.max(1, Math.round(total*0.2));
+  const bottomCount = Math.max(1, Math.round(total*0.2));
+  const midCount = total - topCount - bottomCount;
+
+  // 그룹 분류
+  const top = creators.slice(0, topCount);
+  const mid = creators.slice(topCount, topCount+midCount);
+  const bottom = creators.slice(topCount+bottomCount);
+
+  // 코칭 대상: 중간 그룹 중 ROI가 평균 이상인 크리에이터
+  const midAvgRoi = mid.reduce((s,c)=>s+c.roi,0) / (mid.length||1);
+  const coachTargets = mid.filter(c=>c.roi >= midAvgRoi);
+
+  // 정리 대상: 하위 그룹 전체
+  const cleanupTargets = bottom;
+
+  // 요약 통계
+  const totalViews = creators.reduce((s,c)=>s+c.views,0);
+  const totalCost = creators.reduce((s,c)=>s+c.cost,0);
+  const avgRoi = totalViews / totalCost;
+  const totalVideos = creators.reduce((s,c)=>s+c.videos,0);
+
+  const maxRoi = creators[0]?.roi || 1;
+
+  const tableRows = creators.map((c,i)=>{
+    let group, badge;
+    if(i<topCount){group='상위';badge='badge-top';}
+    else if(i<topCount+midCount){group='중간';badge='badge-mid';}
+    else {group='하위';badge='badge-bottom';}
+    return `<tr class="group-${group==='상위'?'top':group==='중간'?'mid':'bottom'}">
+      <td>${c.name}</td>
+      <td>${c.views.toLocaleString()}</td>
+      <td>₩${c.cost.toLocaleString()}</td>
+      <td>${c.videos}</td>
+      <td style="color:#f39c12;font-weight:600">${c.roi.toFixed(2)}</td>
+      <td><span class="group-badge ${badge}">${group}</span></td>
+    </tr>`;
+  }).join('');
+
+  const barRows = creators.map(c=>`
+    <div class="bar-row">
+      <span class="label">${c.name}</span>
+      <div class="bar"><div class="fill" style="width:${Math.round(c.roi/maxRoi*100)}%;background:linear-gradient(90deg,#f39c12,#e67e22)"></div></div>
+      <span class="val" style="color:#f39c12">${c.roi.toFixed(2)}</span>
+    </div>
+  `).join('');
+
+  const coachHtml = coachTargets.length>0 ? coachTargets.map(c=>`
+    <div class="coach-card">
+      <div class="name">🎯 ${c.name}</div>
+      <div class="reason">ROI ${c.roi.toFixed(2)} · 조회수 ${c.views.toLocaleString()} · 비용 ₩${c.cost.toLocaleString()}<br>
+      💡 중간 그룹 평균 ROI(${midAvgRoi.toFixed(2)}) 이상 · 추가 투자 시 상위 그룹 진입 가능</div>
+    </div>
+  `).join('') : '<div class="empty">코칭 대상이 없습니다.</div>';
+
+  const cleanupHtml = cleanupTargets.length>0 ? cleanupTargets.map(c=>`
+    <div class="coach-card" style="background:rgba(231,76,60,.08);border-color:rgba(231,76,60,.2)">
+      <div class="name" style="color:#e74c3c">🗑️ ${c.name}</div>
+      <div class="reason">ROI ${c.roi.toFixed(2)} · 조회수 ${c.views.toLocaleString()} · 비용 ₩${c.cost.toLocaleString()}<br>
+      💡 하위 그룹 · 비용 대비 성과 미달 · 계약 종료 또는 조건 재협상 권고</div>
+    </div>
+  `).join('') : '<div class="empty">정리 대상이 없습니다.</div>';
+
+  document.getElementById('result').innerHTML = `
+    <div class="card">
+      <h2>📊 포트폴리오 요약</h2>
+      <div class="summary-grid">
+        <div class="summary-item"><div class="num">${total}</div><div class="label">총 크리에이터</div></div>
+        <div class="summary-item"><div class="num">${totalViews.toLocaleString()}</div><div class="label">총 조회수</div></div>
+        <div class="summary-item"><div class="num">₩${totalCost.toLocaleString()}</div><div class="label">총 비용</div></div>
+        <div class="summary-item"><div class="num">${avgRoi.toFixed(2)}</div><div class="label">평균 ROI</div></div>
+        <div class="summary-item"><div class="num">${totalVideos}</div><div class="label">총 영상 수</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📋 크리에이터 분류 (ROI 기준)</h2>
+      <table class="creator-table">
+        <thead><tr><th>이름</th><th>조회수</th><th>비용</th><th>영상수</th><th>ROI</th><th>그룹</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>📊 ROI 바 차트</h2>
+      <div class="bar-chart">${barRows}</div>
+    </div>
+    <div class="card">
+      <h2>🎯 코칭 대상 (중간 그룹 · ROI 평균 이상)</h2>
+      ${coachHtml}
+    </div>
+    <div class="card">
+      <h2>🗑️ 정리 대상 (하위 그룹)</h2>
+      ${cleanupHtml}
+    </div>
+  `;
+
+  saveHistory({
+    date: new Date().toLocaleString('ko-KR'),
+    total,
+    avgRoi: avgRoi.toFixed(2),
+    top: top.map(c=>c.name).join(', '),
+    coach: coachTargets.map(c=>c.name).join(', '),
+    cleanup: cleanupTargets.map(c=>c.name).join(', ')
+  });
+  renderHistory();
+}
+
+function saveHistory(record){
+  let h = JSON.parse(localStorage.getItem('creator_history')||'[]');
+  h.unshift(record);
+  if(h.length>50) h = h.slice(0,50);
+  localStorage.setItem('creator_history', JSON.stringify(h));
+}
+
+function renderHistory(){
+  const h = JSON.parse(localStorage.getItem('creator_history')||'[]');
+  const el = document.getElementById('history');
+  if(h.length===0){
+    el.innerHTML = '<div class="empty">아직 분석 기록이 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = h.map(r=>`
+    <div class="history-item" style="background:rgba(0,0,0,.2);border-radius:8px;padding:12px;margin-bottom:8px;font-size:.85rem">
+      <div class="date" style="color:#f39c12;font-size:.75rem">${r.date}</div>
+      <div>총 ${r.total}명 · 평균 ROI ${r.avgRoi}</div>
+      <div style="font-size:.75rem;color:#888;margin-top:4px">상위: ${r.top||'-'} · 코칭: ${r.coach||'-'} · 정리: ${r.cleanup||'-'}</div>
+    </div>
+  `).join('');
+}
+
+function clearHistory(){
+  if(confirm('모든 분석 기록을 삭제하시겠습니까?')){
+    localStorage.removeItem('creator_history');
+    renderHistory();
+  }
+}
+
+renderHistory();
+</script>
+</body>
+</html>
